@@ -1,0 +1,8 @@
+This isn't really much to look at right now but there's a chance it
+could help get someone else moving along.
+
+The code draws the classic opengl teapot but using a dynamically
+loaded (on every frame) vertex and pixel shader. The currently
+deployed shaders make the teapot look kind of cartoony.
+
+!toon-teapot.png!
