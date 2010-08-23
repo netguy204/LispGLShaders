@@ -1,9 +1,7 @@
 (in-package :gltest)
 
-(defparameter +vshader+ "/home/btaylor/src/myclopengl/test.v.glsl")
-(defparameter +fshader+ "/home/btaylor/src/myclopengl/test.f.glsl")
-(defparameter +alien+ "/home/btaylor/src/myclopengl/lisplogo_alien_256.png")
-(add-resource :alien (make-texture +alien+))
+(defconst +vshader+ (merge-pathnames "test.v.glsl" *sys-path*))
+(defconst +fshader+ (merge-pathnames "test.f.glsl" *sys-path*))
 
 (defclass gltest-window (glut:window)
   ()
@@ -40,7 +38,7 @@
 	(gl:use-program *program*)
 	(glut:solid-teapot 1.3))))
   (gl:front-face :ccw)
-  (glut:swap-buffers)))
+  (glut:swap-buffers))
 
 (defmethod glut:reshape ((window gltest-window) width height)
   (gl:viewport 0 0 width height)

@@ -3,6 +3,7 @@
 
 (in-package :gltest)
 
-(dolist (sys '(:cl-opengl :lispbuilder-sdl :lispbuilder-sdl-image :cl-glu :cl-glut))
-  (asdf:load-system sys))
-
+(defvar *sys-path* (make-pathname :host (pathname-host #.(or *compile-file-truename*
+							     *load-truename*))
+                                  :directory (pathname-directory #.(or *compile-file-truename*
+                                                                       *load-truename*))))
