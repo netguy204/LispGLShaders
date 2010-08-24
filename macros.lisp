@@ -67,11 +67,3 @@
        
        (when (tex-unit ,texture)
 	 (hardware-unbind-texture ,texture)))))
-
-;; just to hang on to it
-(defmacro with-resources (&body body)
-  `(with-texture (*the-texture* +alien+)
-     (with-shader (vertex +vshader+ :vertex-shader)
-       (with-shader (frag +fshader+ :fragment-shader)
-	 (with-program (*program* (vertex frag))
-	   (progn . ,body))))))

@@ -1,7 +1,7 @@
 (in-package :gltest)
 
-(defconst +vshader+ (merge-pathnames "test.v.glsl" *sys-path*))
-(defconst +fshader+ (merge-pathnames "test.f.glsl" *sys-path*))
+(defparameter +vshader+ (merge-pathnames "test.v.glsl" *sys-path*))
+(defparameter +fshader+ (merge-pathnames "test.f.glsl" *sys-path*))
 
 (defclass gltest-window (glut:window)
   ()

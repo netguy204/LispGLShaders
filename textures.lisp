@@ -1,7 +1,7 @@
 (in-package :gltest)
 
 (defclass texture ()
-  ((filename :reader filename :initarg :filename)
+  ((fname :reader fname :initarg :filename)
    (tex-unit :accessor tex-unit :initform nil)
    (glname :accessor glname :initform nil)))
 
@@ -13,7 +13,7 @@
 	:texture4 :texture5 :texture6 :texture7))
 
 (defun load-texture (tex)
-  (with-pixel-and-format ((img pixels fmt) (filename tex))
+  (with-pixel-and-format ((img pixels fmt) (fname tex))
     (let ((name (car (gl:gen-textures 1))))
       (gl:bind-texture :texture-2d name)
       (gl:tex-parameter :texture-2d :texture-min-filter :linear)

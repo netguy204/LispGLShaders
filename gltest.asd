@@ -5,8 +5,9 @@
   :licence "GPL"
   :depends-on (:cl-opengl :lispbuilder-sdl :lispbuilder-sdl-image
 			  :cl-glu :cl-glut)
+  :serial t
   :components ((:file "packages")
-	       (:file "textures" :depends-on ("packages"))
-	       (:file "resources" :depends-on ("packages"))
-	       (:file "macros" :depends-on ("packages" "textures" "resources"))
-	       (:file "test" :depends-on ("macros"))))
+	       (:file "macros")
+	       (:file "textures")
+	       (:file "resources")
+	       (:file "test")))
