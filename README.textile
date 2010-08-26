@@ -5,4 +5,5 @@ The code draws the classic opengl teapot but using a dynamically
 loaded (on every frame) vertex and pixel shader. The currently
 deployed shaders make the teapot look kind of cartoony.
 
+!LispGLShaders/raw/master/tbtank-model.png!
 !LispGLShaders/raw/master/toon-teapot.png!

@@ -141,19 +141,19 @@
 (defmethod glut:display ((w gltest-window))
   (gl:load-identity)
   (gl:translate 0 0 -5)
-  (gl:light :light0 :position '(1 0 0 0))
+  (gl:light :light0 :position '(5 0 0 0))
   (gl:light :light0 :diffuse '(0.2 0.4 0.6 0))
   (gl:clear :color-buffer :depth-buffer)
   
   (gl:rotate *teapot-rotation* 1 1 0)
-  (gl:front-face :cw)
+;  (gl:front-face :cw)
   (with-shader (vertex +vshader+ :vertex-shader)
     (with-shader (frag +fshader+ :fragment-shader)
       (with-program (*program* (vertex frag))
 	(gl:use-program *program*)
 	(render (obj w)))))
 ;	(glut:solid-teapot 1.3))))
-  (gl:front-face :ccw)
+;  (gl:front-face :ccw)
 
   (gl:color 1.0 1.0 1.0 1.0)
  
