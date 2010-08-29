@@ -1,3 +1,4 @@
+
 (in-package :gltest)
 
 (defun rpath (resource)
@@ -5,100 +6,85 @@
 
 (defparameter +vshader+ (rpath "test.v.glsl"))
 (defparameter +fshader+ (rpath "test.f.glsl"))
+(defparameter +texture+ (rpath "lisplogo_alien_256.png"))
 (defparameter +mesh+ (rpath "test.mesh"))
 (defparameter +num-points+ 5)
 
-(defun read-from-file (file)
-  (with-open-file (s file)
-    (read s)))
+(defclass bshader ()
+  ((program :accessor program)
+   (components :accessor components
+	       :initform nil)))
 
-(defun verts (data)
-  (second (find :vert data :key #'first)))
+(defmacro assert-with-info (test item type)
+  `(unless ,test
+     (progn
+       ,(case type
+	      (:shader `(format t "~&SHADER_INFO_LOG: ~a"
+				(gl:get-shader-info-log ,item)))
+	      
+	      (:program `(format t "~&PROGRAM_INFO_LOG: ~a"
+				 (gl:get-program-info-log ,item))))
+       (assert nil))))
 
-(defun faces (data)
-  (second (find :face data :key #'first)))
+(defun make-shader (components)
+  (let ((shader (make-instance 'bshader)))
+    (dolist (centry components)
+      (let ((handle (first centry))
+	    (file (second centry))
+	    (type (third centry)))
+	(let ((name (gl:create-shader type))
+	      (lines (slurp-lines file)))
+	  (gl:shader-source name lines)
+	  (gl:compile-shader name)
+	  (assert-with-info (gl:get-shader name :compile-status) name :shader)
+	  (push (cons handle name) (components shader)))))
+    (let ((program (gl:create-program)))
+      (dolist (comp (components shader))
+	(gl:attach-shader program (cdr comp)))
+      (gl:link-program program)
+      (assert-with-info (gl:get-program program :link-status) program :program)
+      (setf (program shader) program))
 
-(gl:define-gl-array-format position3d
-  (gl:vertex :type :float :components (x y z))
-  (gl:normal :type :float :components (nx ny nz)))
+    shader))
 
-(defun verts-to-array (verts)
-  (let* ((nverts (length verts))
-	 (arr (gl:alloc-gl-array 'position3d nverts)))
-    (loop for v in verts
-	 for i from 0 do
-	 (setf (gl:glaref arr i 'x) (first v))
-	 (setf (gl:glaref arr i 'y) (second v))
-	 (setf (gl:glaref arr i 'z) (third v))
-	 (setf (gl:glaref arr i 'nx) (fourth v))
-	 (setf (gl:glaref arr i 'ny) (fifth v))
-	 (setf (gl:glaref arr i 'nz) (sixth v)))
-    arr))
+(defun get-uniform-loc (shader name)
+  (gl:get-uniform-location (program shader) name))
 
-(defun faces-to-array (faces)
-  (let* ((nelems (reduce #'+ (mapcar #'length faces)))
-	 (flat (reduce #'append faces))
-	 (arr (gl:alloc-gl-array :unsigned-short nelems)))
-    (loop for v in flat
-	 for i from 0 do
-	 (setf (gl:glaref arr i) v))
-    arr))
+(defmethod release ((o bshader))
+  (dolist (comp (components o))
+    (gl:delete-shader (cdr comp)))
+  (setf (components o) nil)
 
-(defun data-style (data)
-  (case (length (first (faces data)))
-    (3 :triangles)))
+  (gl:delete-program (program o))
+  (setf (program o) nil))
 
-(defclass bmesh ()
-  ((vertices :accessor vertices
-	     :initarg :vertices)
-   (elements :accessor elements
-	     :initarg :elements)
-   (style :accessor style
-	  :initarg :style)))
+(defclass btexture ()
+  ((glname :accessor glname)))
 
-(defclass bobj ()
-  ((meshes :accessor meshes
-	   :initform nil)))
+(defun make-texture (file)
+  (with-pixel-and-format ((img pixels fmt) file)
+    (let ((name (car (gl:gen-textures 1)))
+	  (tex (make-instance 'btexture)))
 
-(defun make-bmesh (data)
-  (make-instance 'bmesh
-		 :style (data-style data)
-		 :vertices (verts-to-array (verts data))
-		 :elements (faces-to-array (faces data))))
+      (gl:bind-texture :texture-2d name)
 
-(defun load-bobj (file)
-  (let ((data (read-from-file file))
-	(obj (make-instance 'bobj)))
-    (dolist (mesh data)
-      (push (make-bmesh (second mesh)) (meshes obj)))
-    obj))
+      ;; do stuff
+      (gl:tex-parameter :texture-2d :texture-min-filter :nearest)
+      (gl:tex-parameter :texture-2d :texture-mag-filter :nearest)
+      (gl:tex-parameter :texture-2d :texture-wrap-s :clamp-to-edge)
+      (gl:tex-parameter :texture-2d :texture-wrap-t :clamp-to-edge)
 
-(defmethod release ((m bmesh))
-  (when (vertices m)
-    (gl:free-gl-array (vertices m))
-    (setf (vertices m) nil))
-  (when (elements m)
-    (gl:free-gl-array (elements m))
-    (setf (elements m) nil)))
+      (gl:tex-image-2d :texture-2d
+		       0 ;; base LOD
+		       :rgba ;; how gl should store this
+		       (sdl:width img)
+		       (sdl:height img)
+		       0 ;; border, always 0
+		       fmt :unsigned-byte ;; how we're providing it
+		       (sdl-base::pixel-data pixels))
 
-(defmethod release ((o bobj))
-  (dolist (mesh (meshes o))
-    (release mesh))
-  (setf (meshes o) nil))
-
-(defmethod render ((m bmesh))
-  (gl:enable-client-state :vertex-array)
-  (gl:enable-client-state :normal-array)
-  (gl:bind-gl-vertex-array (vertices m))
-  (gl:draw-elements (style m) (elements m)))
-
-(defmethod render ((o bobj))
-  (dolist (mesh (meshes o))
-    (render mesh)))
-
-(gl:define-gl-array-format position-color
-  (gl:vertex :type :float :components (x y))
-  (gl:color :type :unsigned-char :components (r g b)))
+      (setf (glname tex) name)
+      tex)))
 
 (defclass gltest-window (glut:window)
   ((vertex-array :accessor vertex-array
@@ -106,7 +92,13 @@
    (indices-array :accessor indices-array
 		  :initform (gl:alloc-gl-array :unsigned-short 10))
    (obj :accessor obj
-	:initform (load-bobj +mesh+)))
+	:initform (load-bobj +mesh+))
+   (tex :accessor tex
+	:initform nil);(make-texture +texture+))
+   (shader :accessor shader
+	   :initform nil)
+   (tex-uniform :accessor tex-uniform
+		:initform nil))
 
   (:default-initargs :width 250 :height 250
 		     :title "mytest"
@@ -132,7 +124,11 @@
   (gl:shade-model :smooth)
   (gl:light-model :light-model-local-viewer 1)
   (gl:color-material :front :ambient-and-diffuse)
-  (gl:enable :light0 :lighting :cull-face :depth-test))
+  (gl:enable :light0 :lighting :cull-face :depth-test)
+
+  (setf (shader w) (make-shader (list (list :vert +vshader+ :vertex-shader)
+				      (list :frag +fshader+ :fragment-shader))))
+  (setf (tex-uniform w) (get-uniform-loc (shader w) "texture")))
 
 (defparameter *teapot-rotation* 0.0)
 (defparameter *last-update-time* nil)
@@ -146,14 +142,14 @@
   (gl:clear :color-buffer :depth-buffer)
   
   (gl:rotate *teapot-rotation* 1 1 0)
-;  (gl:front-face :cw)
-  (with-shader (vertex +vshader+ :vertex-shader)
-    (with-shader (frag +fshader+ :fragment-shader)
-      (with-program (*program* (vertex frag))
-	(gl:use-program *program*)
-	(render (obj w)))))
-;	(glut:solid-teapot 1.3))))
-;  (gl:front-face :ccw)
+
+  ;; enable program and bind our texture to it
+  (gl:use-program (program (shader w)))
+  ;(gl:active-texture :texture0)
+  ;(gl:bind-texture :texture-2d (glname (tex w)))
+  (gl:uniformi (tex-uniform w) 0)
+
+  (render (obj w))
 
   (gl:color 1.0 1.0 1.0 1.0)
  
@@ -180,10 +176,12 @@
 (defmethod glut:close ((w gltest-window))
   (gl:free-gl-array (vertex-array w))
   (gl:free-gl-array (indices-array w))
-  (release (obj w)))
+  (release (obj w))
+  (release (shader w)))
 
 (defun run-test ()
   (setf *last-update-time* (sdl:sdl-get-ticks))
+
   (glut:display-window (make-instance 'gltest-window)))
 
 (run-test)

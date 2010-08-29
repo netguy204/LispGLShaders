@@ -7,7 +7,9 @@
 			  :cl-glu :cl-glut)
   :serial t
   :components ((:file "packages")
+	       (:file "utils")
 	       (:file "macros")
 	       (:file "textures")
 	       (:file "resources")
+	       (:file "mesh")
 	       (:file "test")))

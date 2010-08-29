@@ -1,5 +1,8 @@
 varying vec3 normal;
 varying vec3 vertex_to_light_vector;
+varying vec2 texcoord;
+
+uniform sampler2D tex;
 
 float cel(float d) {
     return smoothstep(0.35, 0.37, d) * 0.4 + smoothstep(0.70, 0.72, d) * 0.6;
