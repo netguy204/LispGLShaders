@@ -9,7 +9,5 @@
   :components ((:file "packages")
 	       (:file "utils")
 	       (:file "macros")
-	       (:file "textures")
-	       (:file "resources")
 	       (:file "mesh")
 	       (:file "test")))

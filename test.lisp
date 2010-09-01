@@ -1,4 +1,3 @@
-
 (in-package :gltest)
 
 (defun rpath (resource)
@@ -87,36 +86,19 @@
       tex)))
 
 (defclass gltest-window (glut:window)
-  ((vertex-array :accessor vertex-array
-		 :initform (gl:alloc-gl-array 'position-color +num-points+))
-   (indices-array :accessor indices-array
-		  :initform (gl:alloc-gl-array :unsigned-short 10))
-   (obj :accessor obj
+  ((obj :accessor obj
 	:initform (load-bobj +mesh+))
    (tex :accessor tex
-	:initform nil);(make-texture +texture+))
+	:initform (make-texture +texture+))
    (shader :accessor shader
 	   :initform nil)
    (tex-uniform :accessor tex-uniform
 		:initform nil))
-
   (:default-initargs :width 250 :height 250
 		     :title "mytest"
 		     :mode '(:double :rgb :depth)))
 
 (defmethod glut:display-window :before ((w gltest-window))
-  (dotimes (i +num-points+)
-    (let ((phi (float (+ (/ pi 2) (* (/ i 5) (* 2 pi))) 0.0)))
-      ;; vertices
-      (setf (gl:glaref (vertex-array w) i 'x) (cos phi))
-      (setf (gl:glaref (vertex-array w) i 'y) (sin phi))
-      ;; indices
-      (setf (gl:glaref (indices-array w) (* 2 i)) i)
-      (setf (gl:glaref (indices-array w) (1+ (* 2 i))) (mod (+ i 2) 5))
-      ;; colors
-      (setf (gl:glaref (vertex-array w) i 'r) 255)
-      (setf (gl:glaref (vertex-array w) i 'g) 0)
-      (setf (gl:glaref (vertex-array w) i 'b) 0)))
   (gl:clear-color 0 0 0 0)
   (gl:cull-face :back)
   (gl:depth-func :less)
@@ -145,8 +127,8 @@
 
   ;; enable program and bind our texture to it
   (gl:use-program (program (shader w)))
-  ;(gl:active-texture :texture0)
-  ;(gl:bind-texture :texture-2d (glname (tex w)))
+  (gl:active-texture :texture0)
+  (gl:bind-texture :texture-2d (glname (tex w)))
   (gl:uniformi (tex-uniform w) 0)
 
   (render (obj w))
@@ -169,19 +151,23 @@
     (setf *last-update-time* time-now)
     (setf *teapot-rotation* (+ *teapot-rotation* (* 36 delta-t)))))
 
-(defmethod glut:idle ((window gltest-window))
+(defmethod glut:idle ((w gltest-window))
   (animate)
   (glut:post-redisplay))
 
 (defmethod glut:close ((w gltest-window))
-  (gl:free-gl-array (vertex-array w))
-  (gl:free-gl-array (indices-array w))
   (release (obj w))
-  (release (shader w)))
+  (release (shader w))
+  (sdl-image:quit-image))
 
 (defun run-test ()
   (setf *last-update-time* (sdl:sdl-get-ticks))
-
-  (glut:display-window (make-instance 'gltest-window)))
+  (sdl:with-init ()
+    (sdl:window 400 400
+		:title-caption "fake"
+		:icon-caption "fake")
+    (sdl:initialise-default-font)
+    (sdl-image:init-image :jpg :png)
+    (glut:display-window (make-instance 'gltest-window))))
 
 (run-test)
