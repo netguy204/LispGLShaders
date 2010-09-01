@@ -22,5 +22,5 @@ void main()
 
     float dp = max(dot(nnormal, normalize(vertex_to_light_vector)), 0.0);
     float DiffuseTerm = warp_diffuse(dp);
-    gl_FragColor = texture2D(tex, tc) * DiffuseTerm;    
+    gl_FragColor = DiffuseColor * DiffuseTerm;    
 }

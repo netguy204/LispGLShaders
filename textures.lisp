@@ -1,44 +1,32 @@
 (in-package :gltest)
 
-(defclass texture ()
-  ((fname :reader fname :initarg :filename)
-   (tex-unit :accessor tex-unit :initform nil)
-   (glname :accessor glname :initform nil)))
+(defclass btexture ()
+  ((glname :accessor glname)))
 
 (defun make-texture (file)
-  (make-instance 'texture :filename file))
+  (with-pixel-and-format ((img pixels fmt) file)
+    (let ((name (car (gl:gen-textures 1)))
+	  (tex (make-instance 'btexture)))
 
-(defvar *available-texture-units*
-  (list :texture0 :texture1 :texture2 :texture3
-	:texture4 :texture5 :texture6 :texture7))
+      (format t "~&texture size: ~a x ~a" (sdl:width img) (sdl:height img))
 
-(defun load-texture (tex)
-  (with-pixel-and-format ((img pixels fmt) (fname tex))
-    (let ((name (car (gl:gen-textures 1))))
       (gl:bind-texture :texture-2d name)
-      (gl:tex-parameter :texture-2d :texture-min-filter :linear)
-      (gl:tex-image-2d :texture-2d 0 :rgba
+
+      ;; do stuff
+      (gl:tex-parameter :texture-2d :texture-min-filter :nearest)
+      (gl:tex-parameter :texture-2d :texture-mag-filter :nearest)
+      (gl:tex-parameter :texture-2d :texture-wrap-s :repeat)
+      (gl:tex-parameter :texture-2d :texture-wrap-t :repeat)
+
+      (gl:tex-image-2d :texture-2d
+		       0 ;; base LOD
+		       :rgba ;; how gl should store this
 		       (sdl:width img)
 		       (sdl:height img)
-		       0
-		       fmt
-		       :unsigned-byte (sdl-base::pixel-data pixels))
-      (setf (glname tex) name))))
+		       0 ;; border, always 0
+		       fmt :unsigned-byte ;; how we're providing it
+		       (sdl-base::pixel-data pixels))
 
-(defun unload-texture (tex)
-  (assert (glname tex))
-  (gl:delete-textures (list (glname tex))))
+      (setf (glname tex) name)
+      tex)))
 
-(defun hardware-bind-texture (tex)
-  (assert (null (tex-unit tex)))
-  (assert (glname tex))
-  (let ((unit (pop *available-texture-units*)))
-    (assert unit)
-    (gl:active-texture unit)
-    (gl:bind-texture :texture-2d (glname tex))
-    (setf (tex-unit tex) unit)))
-
-(defun hardware-unbind-texture (tex)
-  (assert (tex-unit tex))
-  (push (tex-unit tex) *available-texture-units*)
-  (setf (tex-unit tex) nil))

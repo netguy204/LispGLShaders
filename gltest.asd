@@ -10,4 +10,7 @@
 	       (:file "utils")
 	       (:file "macros")
 	       (:file "mesh")
+	       (:file "textures")
+	       (:file "shaders")
+	       (:file "windows")
 	       (:file "test")))
