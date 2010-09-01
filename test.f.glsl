@@ -16,7 +16,11 @@ void main()
 {
     const vec4 AmbientColor = vec4(0.0, 0.0, 0.1, 1.0);
     const vec4 DiffuseColor = vec4(0.3, 0.7, 0.3, 1.0);
-    float dp = max(dot(normalize(normal), normalize(vertex_to_light_vector)), 0.0);
+    const vec3 nnormal = normalize(normal);
+
+    const vec2 tc = vec2(nnormal) * vec2(0.5, 0.5) + vec2(0.5, 0.5);
+
+    float dp = max(dot(nnormal, normalize(vertex_to_light_vector)), 0.0);
     float DiffuseTerm = warp_diffuse(dp);
-    gl_FragColor = texture2D(tex, texcoord) * DiffuseTerm;    
+    gl_FragColor = texture2D(tex, tc) * DiffuseTerm;    
 }

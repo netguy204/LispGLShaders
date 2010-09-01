@@ -5,8 +5,8 @@
 
 (defparameter +vshader+ (rpath "test.v.glsl"))
 (defparameter +fshader+ (rpath "test.f.glsl"))
-(defparameter +texture+ (rpath "lisplogo_alien_256.png"))
-(defparameter +mesh+ (rpath "test.mesh"))
+(defparameter +texture+ (rpath "reference_shot.jpg"))
+(defparameter +mesh+ (rpath "apple.mesh"))
 (defparameter +num-points+ 5)
 
 (defclass bshader ()
@@ -70,8 +70,8 @@
       ;; do stuff
       (gl:tex-parameter :texture-2d :texture-min-filter :nearest)
       (gl:tex-parameter :texture-2d :texture-mag-filter :nearest)
-      (gl:tex-parameter :texture-2d :texture-wrap-s :clamp-to-edge)
-      (gl:tex-parameter :texture-2d :texture-wrap-t :clamp-to-edge)
+      (gl:tex-parameter :texture-2d :texture-wrap-s :repeat)
+      (gl:tex-parameter :texture-2d :texture-wrap-t :repeat)
 
       (gl:tex-image-2d :texture-2d
 		       0 ;; base LOD
@@ -82,6 +82,7 @@
 		       fmt :unsigned-byte ;; how we're providing it
 		       (sdl-base::pixel-data pixels))
 
+      (format t "~& texture size: ~a x ~a" (sdl:width img) (sdl:height img))
       (setf (glname tex) name)
       tex)))
 
@@ -165,8 +166,8 @@
   (release (obj w))
   (release (shader w)))
 
-(defparameter *initial-width* 400)
-(defparameter *initial-height* 400)
+(defparameter *initial-width* 600)
+(defparameter *initial-height* 600)
 
 (defun run-test ()
   (setf *last-update-time* (sdl:sdl-get-ticks))
@@ -177,6 +178,7 @@
 		:flags sdl:sdl-opengl)
     (setf cl-opengl-bindings:*gl-get-proc-address*
 	  #'sdl-cffi::sdl-gl-get-proc-address)
+    (setf (sdl:frame-rate) 60)
 
     (let ((w (make-instance 'gltest-window
 			    :width *initial-width*
