@@ -1,26 +1,26 @@
 varying vec3 normal;
 varying vec3 vertex_to_light_vector;
+varying vec2 texcoord;
+
+uniform sampler2D tex;
+
+float cel(float d) {
+    return smoothstep(0.35, 0.37, d) * 0.4 + smoothstep(0.70, 0.72, d) * 0.6;
+}
+
+float warp_diffuse(float d) {
+    return cel(d * 0.5 + 0.5);
+}
 
 void main()
 {
     const vec4 AmbientColor = vec4(0.0, 0.0, 0.1, 1.0);
-    const vec4 DiffuseColor = vec4(0.0, 0.8, 0.0, 1.0);
+    const vec4 DiffuseColor = vec4(0.3, 0.7, 0.3, 1.0);
+    const vec3 nnormal = normalize(normal);
 
-    vec3 normalized_normal = normalize(normal);
-    vec3 normalized_vertex_to_light_vector = normalize(vertex_to_light_vector);
+    const vec2 tc = vec2(nnormal) * vec2(0.5, 0.5) + vec2(0.5, 0.5);
 
-    float DiffuseTerm = clamp(dot(normalized_normal, normalized_vertex_to_light_vector), 0.0, 1.0);
-    
-    vec4 color;
-
-    if(DiffuseTerm > 0.90)
-        color = vec4(1.0, 0.5, 0.5, 1.0);
-    else if (DiffuseTerm > 0.25)
-    	color = vec4(0.6, 0.3, 0.3, 1.0);
-    else if (DiffuseTerm > 0.20)
-        color = vec4(0.4, 0.2, 0.2, 1.0);
-    else
-        color = vec4(0.2, 0.1, 0.1, 1.0);
-
-    gl_FragColor = color;
+    float dp = max(dot(nnormal, normalize(vertex_to_light_vector)), 0.0);
+    float DiffuseTerm = warp_diffuse(dp);
+    gl_FragColor = texture2D(tex, tc) * DiffuseTerm;    
 }

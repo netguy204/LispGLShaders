@@ -1,8 +1,30 @@
 This isn't really much to look at right now but there's a chance it
 could help get someone else moving along.
 
-The code draws the classic opengl teapot but using a dynamically
-loaded (on every frame) vertex and pixel shader. The currently
-deployed shaders make the teapot look kind of cartoony.
+Here's what's been happening so far:
+
+It all started with code that draws the classic opengl teapot but
+using a dynamically loaded (on every frame) vertex and pixel
+shader. The currently deployed shaders make the teapot look kind of
+cartoony.
 
 !LispGLShaders/raw/master/toon-teapot.png!
+
+Then I worked out a very primitive mesh exporter for blender
+(bmesh.py) that turns triangle meshes into s-expressions that are
+loaded in by the code in mesh.lisp. I exported the model I built for
+tbtanks (the 1MonthLispGame repository) and applied the same
+toon-shader.
+
+!LispGLShaders/raw/master/tbtank-model.png!
+
+Then I wanted to do texture mapping. After much pain with trying to
+use lispbuilder-sdl-image with cl-opengl's glut, I gave up and went
+completely to an sdl managed environment. This is probably a better
+move (for me) in the long run since sdl does so much to make this sort
+of thing more pleasant. I finally got images loading and went to
+generate texture coordinates but was too lazy to update bmesh.py so I
+just used the vertex normals (I already had those) as texture
+coordinates and presto! An environment mapped (ish) apple! Good times.
+
+!LispGLShaders/raw/master/environ-apple.png!
