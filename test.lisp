@@ -85,7 +85,7 @@
       (setf (glname tex) name)
       tex)))
 
-(defclass gltest-window (glut:window)
+(defclass gltest-window ()
   ((obj :accessor obj
 	:initform (load-bobj +mesh+))
    (tex :accessor tex
@@ -93,12 +93,19 @@
    (shader :accessor shader
 	   :initform nil)
    (tex-uniform :accessor tex-uniform
-		:initform nil))
-  (:default-initargs :width 250 :height 250
-		     :title "mytest"
-		     :mode '(:double :rgb :depth)))
+		:initform nil)
+   (width :accessor width
+	  :initarg :width)
+   (height :accessor height
+	   :initarg :height)))
 
-(defmethod glut:display-window :before ((w gltest-window))
+(defmethod reload-shader ((w gltest-window))
+  (unless (null (shader w))
+    (release (shader w)))
+  (setf (shader w) (make-shader (list (list :vert +vshader+ :vertex-shader)
+				      (list :frag +fshader+ :fragment-shader)))))
+
+(defmethod prepare-window ((w gltest-window))
   (gl:clear-color 0 0 0 0)
   (gl:cull-face :back)
   (gl:depth-func :less)
@@ -107,21 +114,21 @@
   (gl:light-model :light-model-local-viewer 1)
   (gl:color-material :front :ambient-and-diffuse)
   (gl:enable :light0 :lighting :cull-face :depth-test)
-
-  (setf (shader w) (make-shader (list (list :vert +vshader+ :vertex-shader)
-				      (list :frag +fshader+ :fragment-shader))))
+  
+  (reload-shader w)
   (setf (tex-uniform w) (get-uniform-loc (shader w) "texture")))
 
 (defparameter *teapot-rotation* 0.0)
 (defparameter *last-update-time* nil)
 (defvar *program* nil)
 
-(defmethod glut:display ((w gltest-window))
+(defmethod render ((w gltest-window))
+  (gl:clear :color-buffer :depth-buffer)
+
   (gl:load-identity)
   (gl:translate 0 0 -5)
   (gl:light :light0 :position '(5 0 0 0))
   (gl:light :light0 :diffuse '(0.2 0.4 0.6 0))
-  (gl:clear :color-buffer :depth-buffer)
   
   (gl:rotate *teapot-rotation* 1 1 0)
 
@@ -134,40 +141,63 @@
   (render (obj w))
 
   (gl:color 1.0 1.0 1.0 1.0)
- 
-  (glut:swap-buffers))
 
-(defmethod glut:reshape ((window gltest-window) width height)
+  (gl:flush)
+  (sdl:update-display))
+
+(defmethod reshape ((w gltest-window) width height)
   (gl:viewport 0 0 width height)
   (gl:matrix-mode :projection)
   (gl:load-identity)
   (glu:perspective 50 (/ width height) 0.5 20)
   (gl:matrix-mode :modelview)
-  (gl:load-identity))
+  (gl:load-identity)
+  (setf (width w) width
+	(height w) height))
 
-(defun animate ()
+(defmethod animate ((window gltest-window))
   (let* ((time-now (sdl:sdl-get-ticks))
 	 (delta-t (/ (- time-now *last-update-time*) 1000.0)))
     (setf *last-update-time* time-now)
     (setf *teapot-rotation* (+ *teapot-rotation* (* 36 delta-t)))))
 
-(defmethod glut:idle ((w gltest-window))
-  (animate)
-  (glut:post-redisplay))
-
-(defmethod glut:close ((w gltest-window))
+(defmethod release ((w gltest-window))
   (release (obj w))
-  (release (shader w))
-  (sdl-image:quit-image))
+  (release (shader w)))
+
+(defparameter *initial-width* 400)
+(defparameter *initial-height* 400)
 
 (defun run-test ()
   (setf *last-update-time* (sdl:sdl-get-ticks))
   (sdl:with-init ()
-    (sdl:window 400 400
-		:title-caption "fake"
-		:icon-caption "fake")
-    (sdl:initialise-default-font)
-    (sdl-image:init-image :jpg :png)
-    (glut:display-window (make-instance 'gltest-window))))
+    (sdl:window *initial-width* *initial-height*
+		:title-caption "OpenGL Test"
+		:icon-caption "OpenGL Test"
+		:flags sdl:sdl-opengl)
+    (setf cl-opengl-bindings:*gl-get-proc-address*
+	  #'sdl-cffi::sdl-gl-get-proc-address)
+
+    (let ((w (make-instance 'gltest-window
+			    :width *initial-width*
+			    :height *initial-height*)))
+      (prepare-window w)
+      (reshape w *initial-width* *initial-height*)
+
+      (sdl:with-events ()
+	(:quit-event ()
+		     (release w)
+		     t)
+
+	(:key-down-event (:key key)
+			 (when (sdl:key= key :sdl-key-r)
+			   (reload-shader w))
+
+			 (when (sdl:key= key :sdl-key-escape)
+			   (sdl:push-quit-event)))
+	
+	(:idle ()
+	       (animate w)
+	       (render w))))))
 
 (run-test)
