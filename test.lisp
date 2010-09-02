@@ -10,13 +10,13 @@
 (defparameter *teapot-rotation* 0.0)
 (defparameter *last-update-time* nil)
 
-(defparameter *initial-width* 300)
-(defparameter *initial-height* 300)
-(defparameter *use-shader* 0)
+(defparameter *initial-width* 400)
+(defparameter *initial-height* 400)
+(defparameter *use-shader* nil)
 
 (defclass gltest-window (bwindow)
   ((obj :accessor obj
-	:initform (load-bobj +mesh+))
+	:initform (make-grid-plane 10 10));(load-bobj +mesh+))
 ;;   (tex :accessor tex
 ;;	:initform (make-texture +texture+))
    (shader :accessor shader
@@ -37,11 +37,11 @@
     (setf (tex-uniform w) (get-uniform-loc (shader w) "texture"))))
 
 (defmethod render ((w gltest-window))
-  (gl:translate 0 0 -5)
+  (gl:translate 0.5 -0.5 -1)
   (gl:light :light0 :position '(0 1 1 0))
-  (gl:light :light0 :diffuse '(0.2 0.4 0.6 0))
+  (gl:light :light0 :diffuse '(0.8 0.8 0.8 0))
   
-  (gl:rotate *teapot-rotation* 1 1 0)
+  (gl:rotate 180.0 0 1 0)
 
   ;; enable program and bind our texture to it
   (when *use-shader*
@@ -52,11 +52,25 @@
 
   (render (obj w)))
 
-(defmethod animate ((window gltest-window))
+(defmethod animate ((w gltest-window))
   (let* ((time-now (sdl:sdl-get-ticks))
 	 (delta-t (/ (- time-now *last-update-time*) 1000.0)))
     (setf *last-update-time* time-now)
-    (setf *teapot-rotation* (+ *teapot-rotation* (* 36 delta-t)))))
+    (setf *teapot-rotation* (+ *teapot-rotation* (* pi delta-t)))
+
+    ;; modulate the colors in obj
+    (let ((varr (vertices (obj w)))
+	  (idx (make-idxer 10)))
+
+      (dogrid (xx yy) (10 10)
+	(let* ((xphase (* pi .1 xx))
+	       (tphase *teapot-rotation*)
+	       (phase (+ xphase tphase))
+	       (fv (sin phase))
+	       (iv (floor (max 0 (* 255 fv)))))
+
+	  (setf (gl:glaref varr (funcall idx xx yy) 'b) iv))))))
+
 
 (defmethod release ((w gltest-window))
   (release (obj w))
@@ -86,7 +100,7 @@
     (let ((w (create-gl-window *initial-width* *initial-height*
 			       "OpenGL Test"
 			       'gltest-window)))
-      (setf (sdl:frame-rate) 10)
+      (setf (sdl:frame-rate) 60)
       (sdl:with-events ()
 	(:quit-event ()
 		     (release w)

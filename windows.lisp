@@ -14,7 +14,7 @@
   (gl:shade-model :smooth)
   (gl:light-model :light-model-local-viewer 1)
   (gl:color-material :front :ambient-and-diffuse)
-  (gl:enable :light0 :lighting :cull-face :depth-test))
+  (gl:enable :light0 :lighting :cull-face :depth-test :color-material))
 
 (defmethod render :before ((w bwindow))
   (gl:clear :color-buffer :depth-buffer)

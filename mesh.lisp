@@ -74,17 +74,94 @@
     (release mesh))
   (setf (meshes o) nil))
 
+(defmacro with-client-state (states &body body)
+  "execute body with the client states enabled"
+  (let ((svar (gensym)))
+    `(progn
+       (dolist (,svar ,states)
+	 (gl:enable-client-state ,svar))
+       (progn . ,body)
+       (dolist (,svar ,states)
+	 (gl:disable-client-state ,svar)))))
+
 (defmethod render ((m bmesh))
-  (gl:enable-client-state :vertex-array)
-  (gl:enable-client-state :normal-array)
-  (gl:bind-gl-vertex-array (vertices m))
-  (gl:draw-elements (style m) (elements m)))
+  (with-client-state '(:vertex-array :normal-array :color-array)
+    (gl:bind-gl-vertex-array (vertices m))
+    (gl:draw-elements (style m) (elements m))))
 
 (defmethod render ((o bobj))
   (dolist (mesh (meshes o))
     (render mesh)))
 
 (gl:define-gl-array-format position-color
-  (gl:vertex :type :float :components (x y))
-  (gl:color :type :unsigned-char :components (r g b)))
+  (gl:color :type :unsigned-char :components (r g b))
+  (gl:vertex :type :float :components (x y z))
+  (gl:normal :type :float :components (nx ny nz)))
 
+(defun make-idxer (nx)
+  (lambda (x y) (+ x (* y nx))))
+
+(defun make-eidxer (nx)
+  (lambda (x y tnum vnum) (+ (* x 6) (* tnum 3) vnum
+			     (* y (- nx 1) 6))))
+
+(defmacro dogrid ((x y) (nx ny) &body body)
+  "iterate over each grid point in row major order"
+  `(dotimes (,y ,ny)
+     (dotimes (,x ,nx)
+       (progn . ,body))))
+
+(defun make-grid-plane (nx ny)
+  (let* ((nverts (* nx ny))
+
+	 ;; 2 triangles at each center
+	 (nelems (* (- nx 1) (- ny 1) 6))
+
+	 (varr (gl:alloc-gl-array 'position-color nverts))
+	 (earr (gl:alloc-gl-array :unsigned-short nelems))
+
+	 (uscale (float (/ (- nx 1))))
+	 (vscale (float (/ (- ny 1))))
+	 (get-idx (make-idxer nx))
+	 (get-eidx (make-eidxer nx)))
+
+    ;; build a row major array of nx X ny verts
+    ;; that is 1 by 1 in object space
+    (dogrid (xx yy) (nx ny)
+      (let ((idx (funcall get-idx xx yy)))
+	(setf (gl:glaref varr idx 'x) (* xx uscale)
+	      (gl:glaref varr idx 'y) (* yy vscale)
+	      (gl:glaref varr idx 'z) 0.0
+	      (gl:glaref varr idx 'nx) 0.0
+	      (gl:glaref varr idx 'ny) 0.0
+	      (gl:glaref varr idx 'nz) -1.0
+	      (gl:glaref varr idx 'r) 255
+	      (gl:glaref varr idx 'g) 128
+	      (gl:glaref varr idx 'b) 255)))
+
+    ;; now wind triangles across those verts in
+    ;; successive strips (but stored as individual
+    ;; triangles
+    ;; Now our index coordinates represent the centers
+    ;; of cells on our grid (not verts)
+    ;;
+    ;; 0,0---------------1,0
+    ;;  |                 |
+    ;;  |                 |
+    ;;  |       0,0       |
+    ;;  |                 |
+    ;;  |                 |
+    ;; 0,1---------------1,1
+    (dogrid (xc yc) ((- nx 1) (- ny 1))
+      (setf (gl:glaref earr (funcall get-eidx xc yc 0 0)) (funcall get-idx xc yc)
+	    (gl:glaref earr (funcall get-eidx xc yc 0 1)) (funcall get-idx xc (+ yc 1))
+	    (gl:glaref earr (funcall get-eidx xc yc 0 2)) (funcall get-idx (+ xc 1) yc)
+	    
+	    (gl:glaref earr (funcall get-eidx xc yc 1 0)) (funcall get-idx xc (+ yc 1))
+	    (gl:glaref earr (funcall get-eidx xc yc 1 1)) (funcall get-idx (+ xc 1) (+ yc 1))
+	    (gl:glaref earr (funcall get-eidx xc yc 1 2)) (funcall get-idx (+ xc 1) yc)))
+
+    (make-instance 'bmesh 
+		   :vertices varr
+		   :elements earr
+		   :style :triangles)))
