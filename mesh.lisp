@@ -111,6 +111,12 @@
      (dotimes (,x ,nx)
        (progn . ,body))))
 
+(defclass grid-plane (bmesh)
+  ((num-rows :reader num-rows
+	     :initarg :num-rows)
+   (num-cols :reader num-cols
+	     :initarg :num-cols)))
+
 (defun make-grid-plane (nx ny)
   (let* ((nverts (* nx ny))
 
@@ -135,9 +141,9 @@
 	      (gl:glaref varr idx 'nx) 0.0
 	      (gl:glaref varr idx 'ny) 0.0
 	      (gl:glaref varr idx 'nz) -1.0
-	      (gl:glaref varr idx 'r) 255
-	      (gl:glaref varr idx 'g) 128
-	      (gl:glaref varr idx 'b) 255)))
+	      (gl:glaref varr idx 'r) 0
+	      (gl:glaref varr idx 'g) 0
+	      (gl:glaref varr idx 'b) 0)))
 
     ;; now wind triangles across those verts in
     ;; successive strips (but stored as individual
@@ -161,7 +167,9 @@
 	    (gl:glaref earr (funcall get-eidx xc yc 1 1)) (funcall get-idx (+ xc 1) (+ yc 1))
 	    (gl:glaref earr (funcall get-eidx xc yc 1 2)) (funcall get-idx (+ xc 1) yc)))
 
-    (make-instance 'bmesh 
+    (make-instance 'grid-plane
+		   :num-rows ny
+		   :num-cols nx
 		   :vertices varr
 		   :elements earr
 		   :style :triangles)))
