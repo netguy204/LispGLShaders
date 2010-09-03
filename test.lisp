@@ -10,11 +10,11 @@
 (defparameter *teapot-rotation* 0.0)
 (defparameter *last-update-time* nil)
 
-(defparameter *initial-width* 400)
-(defparameter *initial-height* 400)
+(defparameter *initial-width* 500)
+(defparameter *initial-height* 500)
 
-(defparameter *grid-width* 50)
-(defparameter *grid-height* 50)
+(defparameter *grid-width* 100)
+(defparameter *grid-height* 100)
 
 (defparameter *use-shader* nil)
 
@@ -50,14 +50,21 @@
   (abs (mod idx max)))
 
 (defmethod neighbors ((b board) x y)
-  (list (cons (wrapped (- x 1) (num-cols b))
-	      y)
-	(cons (wrapped (+ x 1) (num-cols b))
-	      y)
-	(cons x
-	      (wrapped (- y 1) (num-rows b)))
-	(cons x
-	      (wrapped (+ y 1) (num-rows b)))))
+  (let* ((nx (num-cols b))
+	 (ny (num-rows b))
+	 (x-1 (wrapped (- x 1) nx))
+	 (x+1 (wrapped (+ x 1) nx))
+	 (y-1 (wrapped (- y 1) ny))
+	 (y+1 (wrapped (+ y 1) ny)))
+
+    (list (cons x-1 y)
+	  (cons x+1 y)
+	  (cons x y-1)
+	  (cons x y+1)
+	  (cons x-1 y+1)
+	  (cons x+1 y+1)
+	  (cons x-1 y-1)
+	  (cons x+1 y-1))))
 
 (defmethod num-neighbors ((b board) x y)
   (reduce #'+ (mapcar (lambda (c) (if (occupied? b (car c)
@@ -78,10 +85,15 @@
 	    (setf (boardref e x y) 1))))
     e))
 
+(defun random-zero-or-one (prob-one)
+  (if (< (random 1.0) prob-one)
+      1
+      0))
+
 (defun make-random-board (nx ny)
   (let ((b (make-board nx ny)))
     (dogrid (x y) (nx ny)
-      (setf (boardref b x y) (random 2)))
+      (setf (boardref b x y) (random-zero-or-one 0.05)))
     b))
 
 (defmethod display ((b board))
@@ -110,8 +122,22 @@
   (when *use-shader*
     (unless (null (shader w))
       (release (shader w)))
-    (setf (shader w) (make-shader (list (list :vert +vshader+ :vertex-shader)
-					(list :frag +fshader+ :fragment-shader))))))
+    (setf (shader w)
+	  (make-shader
+	   (list (list :vert +vshader+ :vertex-shader)
+		 (list :frag +fshader+ :fragment-shader))))))
+
+(defun make-line-board (w)
+  (let* ((mx (floor (/ (num-cols w) 2)))
+	 (my (floor (/ (num-rows w) 2)))
+	 (xhw (floor (* (num-cols w) .1)))
+	 (minx (- mx xhw))
+	 (maxx (+ mx xhw)))
+    (dogrid (x y) ((num-cols w) (num-rows w))
+      (setf (boardref w x y)
+	    (if (and (= y my)
+		     (>= x minx)
+		     (<= x maxx)) 1 0)))))
 
 (defmethod prepare-window :after ((w gltest-window))
   (when *use-shader*
@@ -119,9 +145,9 @@
     (setf (tex-uniform w) (get-uniform-loc (shader w) "texture"))))
 
 (defmethod render ((w gltest-window))
-  (gl:translate 0.5 -0.5 -1)
+  (gl:translate 0.5 -0.5 -1.2)
   (gl:light :light0 :position '(0 1 1 0))
-  (gl:light :light0 :diffuse '(0.8 0.8 0.8 0))
+  (gl:light :light0 :diffuse '(1.0 1.0 1.0 0))
   
   (gl:rotate 180.0 0 1 0)
 
@@ -145,7 +171,7 @@
 	  (idx (make-idxer (num-cols (world w)))))
 
       (dogrid (xx yy) ((num-cols (world w)) (num-rows (world w)))
-	(setf (gl:glaref varr (funcall idx xx yy) 'b)
+	(setf (gl:glaref varr (funcall idx xx yy) 'g)
 	      (if (occupied? (world w) xx yy)
 		  255
 		  0))))
@@ -189,6 +215,9 @@
 	(:key-down-event (:key key)
 			 (when (sdl:key= key :sdl-key-r)
 			   (reload-shader w))
+
+			 (when (sdl:key= key :sdl-key-l)
+			   (make-line-board (world w)))
 
 			 (when (sdl:key= key :sdl-key-escape)
 			   (sdl:push-quit-event)))

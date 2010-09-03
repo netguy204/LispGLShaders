@@ -143,7 +143,7 @@
 	      (gl:glaref varr idx 'nz) -1.0
 	      (gl:glaref varr idx 'r) 0
 	      (gl:glaref varr idx 'g) 0
-	      (gl:glaref varr idx 'b) 0)))
+	      (gl:glaref varr idx 'b) 255)))
 
     ;; now wind triangles across those verts in
     ;; successive strips (but stored as individual
