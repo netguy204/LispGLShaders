@@ -13,4 +13,5 @@
 	       (:file "textures")
 	       (:file "shaders")
 	       (:file "windows")
+	       (:file "life")
 	       (:file "test")))
