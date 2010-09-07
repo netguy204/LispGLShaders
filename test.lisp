@@ -7,7 +7,7 @@
 (defparameter +fshader+ (rpath "test.f.glsl"))
 (defparameter +texture+ (rpath "testmap.jpg"))
 (defparameter +mesh+ (rpath "apple.mesh"))
-(defparameter *teapot-rotation* 0.0)
+
 (defparameter *last-update-time* nil)
 
 (defparameter *initial-width* 500)
@@ -66,20 +66,15 @@
   (render (obj w)))
 
 (defmethod animate ((w gltest-window))
-  (let* ((time-now (sdl:sdl-get-ticks))
-	 (delta-t (/ (- time-now *last-update-time*) 1000.0)))
-    (setf *last-update-time* time-now)
-    (setf *teapot-rotation* (+ *teapot-rotation* (* pi delta-t)))
+  (let ((varr (vertices (obj w)))
+	(idx (make-idxer (num-cols (world w)))))
 
-    (let ((varr (vertices (obj w)))
-	  (idx (make-idxer (num-cols (world w)))))
-
-      (with-changed (xx yy) (world w)
-	(setf (gl:glaref varr (funcall idx xx yy) 'g)
-	      (if (occupied? (world w) xx yy)
-		  255
-		  0))))
-    (setf (world w) (evolve (world w)))))
+    (with-changed (xx yy) (world w)
+      (setf (gl:glaref varr (funcall idx xx yy) 'g)
+	    (if (occupied? (world w) xx yy)
+		255
+		0))))
+  (setf (world w) (evolve (world w))))
 
 
 (defmethod release ((w gltest-window))
